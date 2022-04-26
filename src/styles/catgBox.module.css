@@ -1,0 +1,41 @@
+*{
+    margin: 0;
+    padding: 0;
+}
+.boxdiv{
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+}
+.box{
+    border: 1px solid rgb(75, 68, 68);
+    margin-top: 2em;
+    width: 400px;
+    min-height: 280px;
+    overflow: hidden;
+    position: relative;
+    border-radius: 20px;
+    padding: 12px;
+    overflow-wrap: break-word;
+
+}
+.tags{
+    font-weight: 700;
+}
+.threads{
+    font-weight: 100;
+    color: rgb(162, 170, 177);
+}
+.heading{
+    font-size: 1.5rem;
+}
+.categoryinput{
+    width: 250px;
+}
+ 
+
+@media only screen and (min-width: 992px){
+
+}
