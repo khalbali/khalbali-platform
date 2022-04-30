@@ -29,10 +29,9 @@ const db = {}
 db.Sequelize = Sequelize
 db.sequelize = sequelize
 
+db.users = require('./users.js')(sequelize, DataTypes)
 db.sequelize.sync({ force: false }).then(() => {
   console.log('yes re-sync done!')
 })
-
-// 1 to Many Relation
 
 module.exports = db
