@@ -21,7 +21,7 @@ sequelize
     console.log('connected..')
   })
   .catch((err) => {
-    console.log('Error' + err)
+    console.log('Error' + err.message)
   })
 
 const db = {}
@@ -29,7 +29,10 @@ const db = {}
 db.Sequelize = Sequelize
 db.sequelize = sequelize
 
-db.users = require('./users.js')(sequelize, DataTypes)
+db.users = require('../models/users.js')(sequelize, DataTypes)
+db.votes = require('../models/postVotes')(sequelize, DataTypes)
+db.moderators = require('../models/moderators')(sequelize, DataTypes)
+
 db.sequelize.sync({ force: false }).then(() => {
   console.log('yes re-sync done!')
 })
