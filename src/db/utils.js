@@ -5,17 +5,25 @@ const updateTableRow = async (table, id, allowedUpdates, updatesObj) => {
     throw new Error('No updates allowed')
   }
   const updateFields = Object.keys(updatesObj)
-  const validUpdate = updateFields.every((updateField) => allowedUpdates.includes(updateField))
+  const validUpdate = updateFields.every((updateField) =>
+    allowedUpdates.includes(updateField)
+  )
   if (!validUpdate) {
-    const fieldsString = allowedUpdates.length > 1
-      ? allowedUpdates.slice(0, allowedUpdates.length - 1).join(', ') + ` and ${allowedUpdates[allowedUpdates.length - 1]}`
-      : allowedUpdates[0]
-    throw new Error(`Only the ${fieldsString} ${allowedUpdates.length === 1 ? 'field' : 'fields'} can be updated`)
+    const fieldsString =
+      allowedUpdates.length > 1
+        ? allowedUpdates.slice(0, allowedUpdates.length - 1).join(', ') +
+          ` and ${allowedUpdates[allowedUpdates.length - 1]}`
+        : allowedUpdates[0]
+    throw new Error(
+      `Only the ${fieldsString} ${
+        allowedUpdates.length === 1 ? 'field' : 'fields'
+      } can be updated`
+    )
   }
 
-  const setFieldsClause = updateFields.map(
-    (updateField, index) => `${updateField} = $${index + 1}`
-  ).join(', ')
+  const setFieldsClause = updateFields
+    .map((updateField, index) => `${updateField} = $${index + 1}`)
+    .join(', ')
 
   const updateFieldsParams = []
   updateFields.forEach((updateField) => {
@@ -29,7 +37,9 @@ const updateTableRow = async (table, id, allowedUpdates, updatesObj) => {
     returning *
   `
 
-  const { rows: [updatedRow] } = await query(updateTableStatement, [...updateFieldsParams, id])
+  const {
+    rows: [updatedRow],
+  } = await query(updateTableStatement, [...updateFieldsParams, id])
   return updatedRow
 }
 
@@ -45,10 +55,9 @@ const userIsModerator = async (username, subreddit) => {
     ${selectModeratorsStatement}
     where u.username = $1 and sr.name = $2
   `
-  const { rows: [moderator] } = await query(findSubredditModeratorStatement, [
-    username,
-    subreddit
-  ])
+  const {
+    rows: [moderator],
+  } = await query(findSubredditModeratorStatement, [username, subreddit])
 
   return !!moderator
 }
@@ -56,5 +65,5 @@ const userIsModerator = async (username, subreddit) => {
 module.exports = {
   updateTableRow,
   selectModeratorsStatement,
-  userIsModerator
+  userIsModerator,
 }

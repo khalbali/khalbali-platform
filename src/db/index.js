@@ -1,22 +1,38 @@
-const { Pool } = require('pg')
+const dbConfig = require('./dbConfig.js')
 
-const devConfig = {
-  host: process.env.PG_HOST,
-  port: process.env.PG_PORT,
-  database: process.env.PG_DBNAME,
-  user: process.env.PG_USER,
-  password: process.env.PG_PASSWORD,
-}
+const { Sequelize, DataTypes } = require('sequelize')
 
-const prodConfig = {
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-}
+const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
+  host: '127.0.0.1',
+  dialect: dbConfig.dialect,
+  operatorsAliases: false,
 
-const pool = new Pool(process.env.NODE_ENV === 'production' ? prodConfig : devConfig)
+  pool: {
+    max: dbConfig.pool.max,
+    min: dbConfig.pool.min,
+    acquire: dbConfig.pool.acquire,
+    idle: dbConfig.pool.idle,
+  },
+})
 
-module.exports = {
-  query: (text, params) => {
-    return pool.query(text, params)
-  }
-}
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log('connected..')
+  })
+  .catch((err) => {
+    console.log('Error' + err)
+  })
+
+const db = {}
+
+db.Sequelize = Sequelize
+db.sequelize = sequelize
+
+db.sequelize.sync({ force: false }).then(() => {
+  console.log('yes re-sync done!')
+})
+
+// 1 to Many Relation
+
+module.exports = db

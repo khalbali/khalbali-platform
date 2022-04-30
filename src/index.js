@@ -8,7 +8,7 @@ const moderatorsRouter = require('./routers/moderators')
 const commentsRouter = require('./routers/comments')
 const votesRouter = require('./routers/votes')
 
-const port = process.env.PORT
+const port = process.env.PORT || 5000
 
 const app = express()
 
