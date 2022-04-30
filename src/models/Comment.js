@@ -1,15 +1,7 @@
-const Subreddit = require('./Subreddit')
+const Post = require('./Post')
 
 module.exports = (sequelize, DataTypes) => {
-  const Post = sequelize.define('Post', {
-    type: {
-      type: DataTypes.ENUM('text', 'link'),
-      allowNull: false,
-    },
-    title: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
+  const Comment = sequelize.define('Subreddit', {
     body: {
       type: DataTypes.TEXT,
       allowNull: false,
@@ -22,14 +14,23 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id',
       },
     },
-    subbReddit_id: {
+    post_id: {
       type: DataTypes.INTERGER,
       allowNull: false,
       references: {
-        model: Subreddit,
+        model: Post,
+        key: 'id',
+      },
+    },
+    parent_comment_id: {
+      type: DataTypes.INTERGER,
+      allowNull: false,
+      references: {
+        model: Comment,
         key: 'id',
       },
     },
   })
-  return Post
+
+  return Comment
 }
