@@ -2,7 +2,7 @@
 module.exports = {
   HOST: 'localhost',
 
-  DB: 'mysql',
+  DB: 'testData',
   USER: 'root',
   PASSWORD: 'kartikey',
   dialect: 'mysql',

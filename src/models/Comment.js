@@ -1,32 +1,32 @@
 const Post = require('./Post')
 const users = require('./users')
 module.exports = (sequelize, DataTypes) => {
-  const Comment = sequelize.define('Subreddit', {
+  const Comment = sequelize.define('Comment', {
     body: {
       type: DataTypes.TEXT,
       allowNull: false,
     },
     author_id: {
-      type: DataTypes.INTERGER,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: users,
+        model: 'users',
         key: 'id',
       },
     },
     post_id: {
-      type: DataTypes.INTERGER,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: Post,
+        model: 'posts',
         key: 'id',
       },
     },
     parent_comment_id: {
-      type: DataTypes.INTERGER,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: Comment,
+        model: 'comments',
         key: 'id',
       },
     },

@@ -1,4 +1,5 @@
 const Subreddit = require('./Subreddit')
+const users = require('./users')
 
 module.exports = (sequelize, DataTypes) => {
   const Post = sequelize.define('Post', {
@@ -15,21 +16,22 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     author_id: {
-      type: DataTypes.INTERGER,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: users,
+        model: 'users',
         key: 'id',
       },
     },
     subbReddit_id: {
-      type: DataTypes.INTERGER,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: Subreddit,
+        model: 'subreddits',
         key: 'id',
       },
     },
   })
+
   return Post
 }
