@@ -104,7 +104,7 @@ router.post('/', auth, async (req, res) => {
 
     // Automatically upvote own comment
 
-    const newCommentVote = CommentVote.create({
+    const newCommentVote = await CommentVote.create({
       userId: 1,
       commentId: newComment.id,
       vote_value: 1,

@@ -1,7 +1,10 @@
 const express = require('express')
-const { query } = require('../db')
+const { query, moderator } = require('../db')
 const auth = require('../middleware/auth')()
 
+const db = require('../db/index')
+const Subreddit = db.subreddit
+const Moderator = db.moderator
 const router = express.Router()
 
 router.get('/', async (req, res) => {
@@ -35,7 +38,7 @@ router.get('/:name', async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     const { name, description } = req.body
-
+    console.log(req.body)
     const nameRegex = new RegExp('^[a-z0-9]+$', 'i')
 
     if (!nameRegex.test(name)) {
@@ -44,31 +47,37 @@ router.post('/', auth, async (req, res) => {
       )
     }
 
-    const insertSubredditStatement = `
-      insert into subreddits(name, description)
-      values($1, $2)
-      returning *
-    `
+    const newSubreddit = await Subreddit.create({
+      name,
+      description,
+    })
 
-    let subreddit
-    try {
-      ;({
-        rows: [subreddit],
-      } = await query(insertSubredditStatement, [name, description]))
-    } catch (e) {
-      res
-        .status(409)
-        .send({ error: 'A subreddit with that name already exists' })
-    }
+    newSubreddit.save()
 
-    const insertModeratorStatement = `
-      insert into moderators(user_id, subreddit_id)
-      values($1, $2)
-    `
+    // let subreddit
+    // try {
+    //   ;({
+    //     rows: [subreddit],
+    //   } = await query(insertSubredditStatement, [name, description]))
+    // } catch (e) {
+    //   res
+    //     .status(409)
+    //     .send({ error: 'A subreddit with that name already exists' })
+    // }
 
-    await query(insertModeratorStatement, [req.user.id, subreddit.id])
+    // const insertModeratorStatement = `
+    //   insert into moderators(user_id, subreddit_id)
+    //   values($1, $2)
+    // `
 
-    res.send(subreddit)
+    const newModerator = await Moderator.create({
+      userId: 1,
+      subredditId: newSubreddit.id,
+    })
+
+    // await query(insertModeratorStatement, [req.user.id, subreddit.id])
+
+    res.send(newSubreddit)
   } catch (e) {
     res.status(400).send({ error: e.message })
   }

@@ -6,7 +6,7 @@ const { updateTableRow } = require('../db/utils')
 const auth = require('../middleware/auth')()
 const db = require('../db/index')
 const router = express.Router()
-const User = db.users
+const User = db.user
 const getPublicUser = (user) => {
   delete user.password
   delete user.tokens
