@@ -3,7 +3,8 @@ const { query } = require('../db')
 const auth = require('../middleware/auth')()
 
 const router = express.Router()
-
+const db = require('../db/index')
+const Vote = db.votes
 const checkVoteType = (voteType) => {
   const types = ['post', 'comment']
   let error
@@ -23,7 +24,9 @@ const checkVoteValid = async (item_id, vote_value, vote_type) => {
     status = 400
     error = 'Invalid vote value'
   } else {
-    const { rows: [item] } = await query(`select * from ${vote_type}s where id = $1`, [item_id])
+    const {
+      rows: [item],
+    } = await Vote.findbyPK
     if (!item) {
       status = 404
       error = `Could not find ${vote_type} with that id`
@@ -49,13 +52,19 @@ router.get('/:voteType', async (req, res) => {
 
 router.post('/:voteType', auth, async (req, res) => {
   try {
-    const { voteType, error: voteTypeError } = checkVoteType(req.params.voteType)
+    const { voteType, error: voteTypeError } = checkVoteType(
+      req.params.voteType
+    )
     if (voteTypeError) {
       return res.status(400).send({ error: voteTypeError })
     }
     const { item_id, vote_value } = req.body
 
-    const { status, error } = await checkVoteValid(item_id, vote_value, voteType)
+    const { status, error } = await checkVoteValid(
+      item_id,
+      vote_value,
+      voteType
+    )
     if (error) {
       return res.status(status).send({ error })
     }
@@ -66,10 +75,12 @@ router.post('/:voteType', auth, async (req, res) => {
     `
     let item_vote
     try {
-      const { rows: [vote] } = await query(insertItemVoteStatement, [
+      const {
+        rows: [vote],
+      } = await query(insertItemVoteStatement, [
         req.user.id,
         item_id,
-        vote_value
+        vote_value,
       ])
       item_vote = vote
     } catch (e) {
@@ -80,10 +91,12 @@ router.post('/:voteType', auth, async (req, res) => {
         returning *
       `
 
-      const { rows: [vote] } = await query(updateItemVoteStatement, [
+      const {
+        rows: [vote],
+      } = await query(updateItemVoteStatement, [
         vote_value,
         req.user.id,
-        item_id
+        item_id,
       ])
       item_vote = vote
     }
