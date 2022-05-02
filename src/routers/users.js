@@ -1,12 +1,13 @@
 const express = require('express')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
-const { query } = require('../db')
+
 const { updateTableRow } = require('../db/utils')
 const auth = require('../middleware/auth')()
 const db = require('../db/index')
+const { json } = require('express')
 const router = express.Router()
-const User = db.users
+const User = db.user
 const getPublicUser = (user) => {
   delete user.password
   delete user.tokens
@@ -30,8 +31,18 @@ const addToken = async (userid) => {
 
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await query('select * from users')
-    res.send(rows.map((user) => getPublicUser(user)))
+    const rows = await User.findAll()
+
+    const data = rows.map((user) => {
+      const values = {
+        username: user.username,
+        updatedAT: user.updatedAt,
+        createdAt: user.createdAt,
+      }
+      return values
+    })
+
+    res.send(data)
   } catch (e) {
     res.status(500).send({ error: e.message })
   }
@@ -41,16 +52,18 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
 
-    const selectUserStatement = `select * from users where id = $1`
-
-    const {
-      rows: [user],
-    } = await query(selectUserStatement, [id])
+    const user = await User.findByPk(id)
 
     if (!user) {
       return res.status(404).send({ error: 'Could not find user with that id' })
+    } else {
+      const values = {
+        username: user.username,
+        updatedAT: user.updatedAt,
+        createdAt: user.createdAt,
+      }
+      res.send(values)
     }
-    res.send(getPublicUser(user))
   } catch (e) {
     res.status(500).send({ error: e.message })
   }
@@ -68,10 +81,10 @@ router.post('/', async (req, res) => {
     }
     const hashedPassword = await bcrypt.hash(password, 10)
     console.log(hashedPassword)
+
     const newUser = await User.create({
       username: username,
       password: hashedPassword,
-      tokens: hashedPassword,
     })
 
     newUser.save()
