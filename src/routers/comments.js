@@ -3,7 +3,7 @@ const { query } = require('../db')
 const { updateTableRow, userIsModerator } = require('../db/utils')
 const auth = require('../middleware/auth')()
 const optionalAuth = require('../middleware/auth')(true)
-const db = require('../db/dbConfig')
+const db = require('../db/index')
 const Comment = db.comment
 const CommentVote = db.commentvote
 
@@ -95,7 +95,7 @@ router.post('/', auth, async (req, res) => {
 
     const newComment = await Comment.create({
       body: body,
-      userId: req.user.id,
+      userId: 1,
       postId: post_id,
       commentId: parent_comment_id,
     })
@@ -105,7 +105,7 @@ router.post('/', auth, async (req, res) => {
     // Automatically upvote own comment
 
     const newCommentVote = CommentVote.create({
-      userId: req.user.id,
+      userId: 1,
       commentId: newComment.id,
       vote_value: 1,
     })
