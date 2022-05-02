@@ -92,28 +92,54 @@ router.post('/:voteType', auth, async (req, res) => {
       return res.status(status).send({ error })
     }
     if (voteType == 'post') {
-      const selectPostVotes = await Vote.create({
-        vote_value: vote_value,
-        postId: item_id,
-        userId: user_id,
+      const findPost = await Vote.findOne({
+        where: [{ postId: item_id }, { userId: user_id }],
       })
-      if (selectPostVotes.length == 0) {
-        return res.status(500).send({ message: 'No votes available' })
+      if (!findPost || findPost.length == 0) {
+        const selectPostVotes = await Vote.create({
+          vote_value: vote_value,
+          postId: item_id,
+          userId: user_id,
+        })
+        if (selectPostVotes.length == 0) {
+          return res.status(500).send({ message: 'No votes available' })
+        } else {
+          return res.send(selectPostVotes)
+        }
       } else {
-        return res.send(selectPostVotes)
+        const updatePostVote = await Vote.update(
+          { vote_value: vote_value },
+          { where: { id: findPost.id } }
+        )
+        if (updatePostVote) {
+          return res.send({ message: 'vote updated' })
+        }
       }
     }
-    if (voteType == 'comment') {
-      const selectCommentVotes = await commentVote.create({
-        vote_value: vote_value,
-        commentId: item_id,
-        userId: user_id,
-      })
 
-      if (selectCommentVotes.length == 0) {
-        return res.status(500).send({ message: 'No votes available' })
+    if (voteType == 'comment') {
+      const findComment = await commentVote.findOne({
+        where: [{ commentId: item_id }, { userId: user_id }],
+      })
+      console.log(findComment.id)
+      if (!findComment || findComment.length == 0) {
+        const selectCommentVotes = await commentVote.create({
+          vote_value: vote_value,
+          commentId: item_id,
+          userId: user_id,
+        })
+
+        if (selectCommentVotes.length == 0) {
+          return res.status(500).send({ message: 'No votes available' })
+        } else {
+          return res.send(selectCommentVotes)
+        }
       } else {
-        return res.send(selectCommentVotes)
+        const updateCommentVote = await commentVote.update(
+          { vote_value: vote_value },
+          { where: { id: findComment.id } }
+        )
+        return res.send({ message: 'vote updated' })
       }
     }
   } catch (e) {
