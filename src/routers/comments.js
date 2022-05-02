@@ -3,6 +3,9 @@ const { query } = require('../db')
 const { updateTableRow, userIsModerator } = require('../db/utils')
 const auth = require('../middleware/auth')()
 const optionalAuth = require('../middleware/auth')(true)
+const db = require('../db/index')
+const Comment = db.comment
+const CommentVote = db.commentvote
 
 const router = express.Router()
 
@@ -62,8 +65,13 @@ router.get('/:post_id', optionalAuth, async (req, res) => {
       order by votes desc
     `
     const user_id = req.user ? req.user.id : -1
-    const { rows: [post] } = await query(selectPostStatement, [user_id, post_id])
-    const { rows: comments } = await query(selectCommentsStatement, [user_id, post_id])
+    const {
+      rows: [post],
+    } = await query(selectPostStatement, [user_id, post_id])
+    const { rows: comments } = await query(selectCommentsStatement, [
+      user_id,
+      post_id,
+    ])
 
     if (!post) {
       return res.status(404).send({ error: 'Could not find post with that id' })
@@ -84,30 +92,27 @@ router.post('/', auth, async (req, res) => {
     if (!post_id) {
       throw new Error('Must specify post to comment on')
     }
-    const insertCommentStatement = `
-      insert into comments(body, author_id, post_id, parent_comment_id)
-      values($1, $2, $3, $4)
-      returning *
-    `
-    const { rows: [{ id }] } = await query(insertCommentStatement, [
-      body,
-      req.user.id,
-      post_id,
-      parent_comment_id
-    ])
+
+    const newComment = await Comment.create({
+      body: body,
+      userId: 1,
+      postId: post_id,
+      commentId: parent_comment_id,
+    })
+    console.log(newComment)
+    newComment.save()
 
     // Automatically upvote own comment
-    const createVoteStatement = `insert into comment_votes values ($1, $2, $3)`
-    await query(createVoteStatement, [req.user.id, id, 1])
 
-    const selectInsertedCommentStatement = `
-      ${selectAllCommentsStatement}
-      having c.id = $2
-    `
+    const newCommentVote = await CommentVote.create({
+      userId: 1,
+      commentId: newComment.id,
+      vote_value: 1,
+    })
+    console.log(newCommentVote)
+    newCommentVote.save()
 
-    const { rows: [comment] } = await query(selectInsertedCommentStatement, [req.user.id, id])
-
-    res.status(201).send(comment)
+    res.status(201).send(newComment)
   } catch (e) {
     res.status(400).send({ error: e.message })
   }
@@ -117,16 +122,30 @@ router.put('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params
 
-    const { rows: [comment] } = await query(selectCommentStatement, [id])
+    const {
+      rows: [comment],
+    } = await query(selectCommentStatement, [id])
     if (!comment) {
-      return res.status(404).send({ error: 'Could not find comment with that id' })
+      return res
+        .status(404)
+        .send({ error: 'Could not find comment with that id' })
     }
-    if ((comment.author_id !== req.user.id)
-        && (await userIsModerator(req.user.username, comment.subreddit_name) === false)) {
-      return res.status(403).send({ error: 'You must the comment author to edit it' })
+    if (
+      comment.author_id !== req.user.id &&
+      (await userIsModerator(req.user.username, comment.subreddit_name)) ===
+        false
+    ) {
+      return res
+        .status(403)
+        .send({ error: 'You must the comment author to edit it' })
     }
 
-    const updatedComment = await updateTableRow('comments', id, ['body'], req.body)
+    const updatedComment = await updateTableRow(
+      'comments',
+      id,
+      ['body'],
+      req.body
+    )
 
     res.send(updatedComment)
   } catch (e) {
@@ -137,18 +156,27 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params
-    const { rows: [comment] } = await query(selectCommentStatement, [id])
+    const {
+      rows: [comment],
+    } = await query(selectCommentStatement, [id])
     if (!comment) {
-      return res.status(404).send({ error: 'Could not find comment with that id' })
+      return res
+        .status(404)
+        .send({ error: 'Could not find comment with that id' })
     }
-    if ((comment.author_id !== req.user.id)
-        && (await userIsModerator(req.user.username, comment.subreddit_name) === false)) {
-      return res.status(403).send({ error: 'You must be the comment author to delete it' })
+    if (
+      comment.author_id !== req.user.id &&
+      (await userIsModerator(req.user.username, comment.subreddit_name)) ===
+        false
+    ) {
+      return res
+        .status(403)
+        .send({ error: 'You must be the comment author to delete it' })
     }
 
     // const deleteCommentStatement = `delete from comments where id = $1 returning *`
     // const { rows: [deletedComment] } = await query(deleteCommentStatement, [id])
-    
+
     const setFieldsToNullStatement = `
       update comments
       set body = null,
@@ -157,7 +185,9 @@ router.delete('/:id', auth, async (req, res) => {
       returning *
     `
 
-    const { rows: [deletedComment] } = await query(setFieldsToNullStatement, [id])
+    const {
+      rows: [deletedComment],
+    } = await query(setFieldsToNullStatement, [id])
 
     res.send(deletedComment)
   } catch (e) {

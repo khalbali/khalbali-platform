@@ -35,6 +35,7 @@ db.moderator = require('../models/moderators')(sequelize, DataTypes)
 db.subreddit = require('../models/Subreddit')(sequelize, DataTypes)
 db.comment = require('../models/Comment')(sequelize, DataTypes)
 db.post = require('../models/Post')(sequelize, DataTypes)
+db.commentvote = require('../models/commentVotes')(sequelize, DataTypes)
 
 db.user.hasMany(db.comment)
 db.post.hasMany(db.comment)
@@ -45,6 +46,8 @@ db.post.hasMany(db.vote)
 db.user.hasMany(db.vote)
 db.user.hasMany(db.moderator)
 db.subreddit.hasMany(db.moderator)
+db.comment.hasMany(db.commentvote)
+db.user.hasMany(db.commentvote)
 
 db.sequelize.sync({ force: false }).then(() => {
   console.log('yes re-sync done!')

@@ -3,6 +3,10 @@ const { query } = require('../db')
 const { updateTableRow } = require('../db/utils')
 const auth = require('../middleware/auth')()
 const optionalAuth = require('../middleware/auth')(true)
+const db = require('../db/index')
+const Subreddit = db.subreddit
+const Post = db.post
+const PostVote = db.vote
 
 const router = express.Router()
 
@@ -26,27 +30,35 @@ router.get('/', optionalAuth, async (req, res) => {
   try {
     const allowedFilters = ['subreddit', 'author']
     const columnNamesEnum = {
-      'subreddit': 'max(sr.name)',
-      'author': 'max(u.username)'
+      subreddit: 'max(sr.name)',
+      author: 'max(u.username)',
     }
-    const validFilters = Object.keys(req.query).every((key) => allowedFilters.includes(key))
+    const validFilters = Object.keys(req.query).every((key) =>
+      allowedFilters.includes(key)
+    )
     if (!validFilters) {
-      return res.status(400).send({ error: `The only allowed filters are ${allowedFilters.join(', ')}`})
-    } 
+      return res.status(400).send({
+        error: `The only allowed filters are ${allowedFilters.join(', ')}`,
+      })
+    }
 
     const user_id = req.user ? req.user.id : -1
     const queryArgs = [user_id]
-    
+
     const havingAndClause = []
     Object.entries(req.query).forEach(([filterName, filterValue]) => {
       queryArgs.push(filterValue)
-      havingAndClause.push(`${columnNamesEnum[filterName]} = $${queryArgs.length}`)
+      havingAndClause.push(
+        `${columnNamesEnum[filterName]} = $${queryArgs.length}`
+      )
     })
-    
+
     const selectFilteredPostsStatement = `
       ${selectPostStatement}
       having p.title is not null
-      ${havingAndClause.length > 0 ? 'and' : ''} ${havingAndClause.join(' and ')}
+      ${havingAndClause.length > 0 ? 'and' : ''} ${havingAndClause.join(
+      ' and '
+    )}
       order by votes desc
     `
 
@@ -61,7 +73,9 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
     const user_id = req.user ? req.user.id : -1
-    const { rows: [post] } = await query(`${selectPostStatement} having p.id = $2`, [user_id, id])
+    const {
+      rows: [post],
+    } = await query(`${selectPostStatement} having p.id = $2`, [user_id, id])
     if (!post) {
       return res.status(404).send({ error: 'Could not find post with that id' })
     }
@@ -88,33 +102,53 @@ router.post('/', auth, async (req, res) => {
       throw new Error('Must specify subreddit')
     }
 
-    const selectSubredditIdStatement = `select * from subreddits where name = $1`
+    // const selectSubredditIdStatement = `select * from subreddits where name = $1`
 
-    const { rows: [foundSubreddit] } = await query(selectSubredditIdStatement, [subreddit])
+    // const { rows: [foundSubreddit] } = await query(selectSubredditIdStatement, [subreddit])
+
+    const foundSubreddit = await Subreddit.findOne({
+      where: { name: subreddit },
+    })
 
     if (!foundSubreddit) {
       throw new Error('Subreddit does not exist')
     }
 
-    const createPostStatement = `
-      insert into posts(type, title, body, author_id, subreddit_id)
-      values($1, $2, $3, $4, $5)
-      returning *
-    `
+    // const createPostStatement = `
+    //   insert into posts(type, title, body, author_id, subreddit_id)
+    //   values($1, $2, $3, $4, $5)
+    //   returning *
+    // `
 
-    const { rows: [post] } = await query(createPostStatement, [
+    const newpost = await Post.create({
       type,
       title,
       body,
-      req.user.id,
-      foundSubreddit.id
-    ])
+      userId: 1,
+      subredditId: foundSubreddit.id,
+    })
 
-    // Automatically upvote your own post
-    const createVoteStatement = `insert into post_votes values ($1, $2, $3)`
-    await query(createVoteStatement, [req.user.id, post.id, 1])
+    // const {
+    //   rows: [post],
+    // } = await query(createPostStatement, [
+    //   type,
+    //   title,
+    //   body,
+    //   req.user.id,
+    //   foundSubreddit.id,
+    // ])
 
-    res.status(201).send(post)
+    const newPostVote = await PostVote.create({
+      vote_value: 1,
+      postId: newpost.id,
+      userId: 1,
+    })
+
+    // // Automatically upvote your own post
+    // const createVoteStatement = `insert into post_votes values ($1, $2, $3)`
+    // await query(createVoteStatement, [req.user.id, post.id, 1])
+
+    res.status(201).send(newpost)
   } catch (e) {
     res.status(400).send({ error: e.message })
   }
@@ -124,13 +158,17 @@ router.put('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params
     const selectPostStatement = `select * from posts where id = $1`
-    const { rows: [post] } = await query(selectPostStatement, [id])
+    const {
+      rows: [post],
+    } = await query(selectPostStatement, [id])
 
     if (!post) {
       return res.status(404).send({ error: 'Could not find post with that id' })
     }
     if (post.author_id !== req.user.id) {
-      return res.status(403).send({ error: 'You must be the post creator to edit it' })
+      return res
+        .status(403)
+        .send({ error: 'You must be the post creator to edit it' })
     }
 
     let allowedUpdates
@@ -145,7 +183,12 @@ router.put('/:id', auth, async (req, res) => {
         allowedUpdates = []
     }
 
-    const updatedPost = await updateTableRow('posts', id, allowedUpdates, req.body)
+    const updatedPost = await updateTableRow(
+      'posts',
+      id,
+      allowedUpdates,
+      req.body
+    )
     res.send(updatedPost)
   } catch (e) {
     res.status(400).send({ error: e.message })
@@ -156,13 +199,17 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params
     const selectPostStatement = `select * from posts where id = $1`
-    const { rows: [post] } = await query(selectPostStatement, [id])
+    const {
+      rows: [post],
+    } = await query(selectPostStatement, [id])
 
     if (!post) {
       return res.status(404).send({ error: 'Could not find post with that id' })
     }
     if (post.author_id !== req.user.id) {
-      return res.status(401).send({ error: 'You must be the post creator to delete it' })
+      return res
+        .status(401)
+        .send({ error: 'You must be the post creator to delete it' })
     }
 
     // const deletePostStatement = `delete from posts where id = $1 returning *`
@@ -178,7 +225,9 @@ router.delete('/:id', auth, async (req, res) => {
       returning *
     `
 
-    const { rows: [deletedPost] } = await query(setFieldsToNullStatement, [id])
+    const {
+      rows: [deletedPost],
+    } = await query(setFieldsToNullStatement, [id])
     res.send(deletedPost)
   } catch (e) {
     res.status(400).send({ error: e.message })
