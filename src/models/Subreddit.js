@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-  const Subreddit = sequelize.define('Subreddit', {
+  const Subreddit = sequelize.define('subreddit', {
     name: {
       type: DataTypes.STRING,
       allowNull: false,

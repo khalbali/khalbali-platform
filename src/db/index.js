@@ -29,61 +29,22 @@ const db = {}
 db.Sequelize = Sequelize
 db.sequelize = sequelize
 
-db.users = require('../models/users.js')(sequelize, DataTypes)
-db.votes = require('../models/postVotes')(sequelize, DataTypes)
-db.moderators = require('../models/moderators')(sequelize, DataTypes)
-db.Subreddit = require('../models/Subreddit')(sequelize, DataTypes)
+db.user = require('../models/users.js')(sequelize, DataTypes)
+db.vote = require('../models/postVotes')(sequelize, DataTypes)
+db.moderator = require('../models/moderators')(sequelize, DataTypes)
+db.subreddit = require('../models/Subreddit')(sequelize, DataTypes)
 db.comment = require('../models/Comment')(sequelize, DataTypes)
-db.Post = require('../models/Post')(sequelize, DataTypes)
+db.post = require('../models/Post')(sequelize, DataTypes)
 
-db.users.hasMany(db.comment, {
-  foreignKey: 'author_id',
-  foreignKeyConstraint: true,
-})
-db.Post.hasMany(db.comment, {
-  foreignKey: 'post_id',
-  foreignKeyConstraint: true,
-})
-db.comment.hasMany(db.comment, {
-  foreignKey: 'parent_comment_id',
-  foreignKeyConstraint: true,
-})
-db.users.hasMany(db.Post, {
-  foreignKey: 'author_id',
-  foreignKeyConstraint: true,
-})
-db.Subreddit.hasMany(
-  db.Post,
-  { constraints: false },
-  {
-    foreignKey: 'subbReddit_id',
-    foreignKeyConstraint: true,
-  }
-)
-db.Post.hasMany(
-  db.votes,
-  { constraints: false },
-  {
-    foreignKey: 'post_id',
-    foreignKeyConstraint: true,
-  }
-)
-db.users.hasMany(db.votes, {
-  foreignKey: 'user_id',
-  foreignKeyConstraint: true,
-})
-db.users.hasMany(db.moderators, {
-  foreignKey: 'user_id',
-  foreignKeyConstraint: true,
-})
-db.Subreddit.hasMany(
-  db.moderators,
-  { constraints: false },
-  {
-    foreignKey: 'subreddit_id',
-    foreignKeyConstraint: true,
-  }
-)
+db.user.hasMany(db.comment)
+db.post.hasMany(db.comment)
+db.comment.hasMany(db.comment)
+db.user.hasMany(db.post)
+db.subreddit.hasMany(db.post)
+db.post.hasMany(db.vote)
+db.user.hasMany(db.vote)
+db.user.hasMany(db.moderator)
+db.subreddit.hasMany(db.moderator)
 
 db.sequelize.sync({ force: false }).then(() => {
   console.log('yes re-sync done!')
