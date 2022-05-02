@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
 const { updateTableRow } = require('../db/utils')
-const auth = require('../middleware/auth')()
+//cons = require('../middlewar')()
 const db = require('../db/index')
 const { json } = require('express')
 const router = express.Router()
@@ -35,6 +35,7 @@ router.get('/', async (req, res) => {
 
     const data = rows.map((user) => {
       const values = {
+        id: user.id,
         username: user.username,
         updatedAT: user.updatedAt,
         createdAt: user.createdAt,
@@ -58,6 +59,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).send({ error: 'Could not find user with that id' })
     } else {
       const values = {
+        id: user.id,
         username: user.username,
         updatedAT: user.updatedAt,
         createdAt: user.createdAt,
@@ -79,6 +81,11 @@ router.post('/', async (req, res) => {
     if (!password) {
       throw new Error('Password is required')
     }
+    const rows = await User.findOne({ where: { username: username } })
+    console.log(rows)
+    if (rows != null) {
+      return res.status(409).send({ error: 'Username is already taken' })
+    }
     const hashedPassword = await bcrypt.hash(password, 10)
     console.log(hashedPassword)
 
@@ -90,6 +97,7 @@ router.post('/', async (req, res) => {
     newUser.save()
 
     return res.status(201).send({
+      id: user.id,
       username: newUser.username,
     })
   } catch (e) {
@@ -104,32 +112,37 @@ router.post('/login', async (req, res) => {
       throw new Error('Username and password are required')
     }
 
-    const selectUserStatement = `select * from users where username = $1`
+    const selectUserStatement = await User.findOne({
+      where: { username: username },
+    })
 
-    const { rows } = await query(selectUserStatement, [username])
-    const failedLoginError = { error: 'Username or password was incorrect' }
-
-    if (!rows[0]) {
-      return res.status(401).send(failedLoginError)
+    if (!selectUserStatement) {
+      return res
+        .status(401)
+        .send({ error: 'Username or password was incorrect' })
     }
 
-    const isMatch = await bcrypt.compare(password, rows[0].password)
+    const isMatch = await bcrypt.compare(password, selectUserStatement.password)
     if (!isMatch) {
-      return res.status(401).send(failedLoginError)
+      return res
+        .status(401)
+        .send({ error: 'Username or password was incorrect' })
     }
 
-    const { user, token } = await addToken(rows[0].id)
+    //const { user, token } = await addToken(rows[0].id)
 
     res.send({
-      user: getPublicUser(user),
-      token,
+      id: selectUserStatement.id,
+      user: selectUserStatement.username,
+      updatedAT: selectUserStatement.updatedAT,
+      createdAt: selectUserStatement.createdAt,
     })
   } catch (e) {
     res.status(400).send({ error: e.message })
   }
 })
 
-router.post('/logout', auth, async (req, res) => {
+router.post('/logout', async (req, res) => {
   const tokens = req.user.tokens.filter((token) => token !== req.token)
   const setUserTokensStatement = `
     update users
@@ -144,7 +157,7 @@ router.post('/logout', auth, async (req, res) => {
   res.send(user)
 })
 
-router.post('/logoutAll', auth, async (req, res) => {
+router.post('/logoutAll', async (req, res) => {
   const clearUserTokensStatement = `
     update users
     set tokens = '{}'
@@ -158,45 +171,51 @@ router.post('/logoutAll', auth, async (req, res) => {
   res.send(user)
 })
 
-router.put('/', auth, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
-    const allowedUpdates = ['username', 'password']
-    if (req.body.username !== undefined) {
-      const { rows } = await query(`select * from users where username = $1`, [
-        req.body.username,
-      ])
-      if (rows.length > 0) {
-        return res.status(409).send({ error: 'Username is already taken' })
-      }
+    console.log(req.params.id)
+    const { username, password } = req.body
+    if (!username) {
+      throw new Error('Username is required')
     }
-    if (req.body.password !== undefined) {
-      req.body.password = await bcrypt.hash(req.body.password, 10)
+    if (!password) {
+      throw new Error('Password is required')
     }
-    const user = await updateTableRow(
-      'users',
-      req.user.id,
-      allowedUpdates,
-      req.body
-    )
 
-    res.send(getPublicUser(user))
+    const rows = await User.findOne({ where: { username: username } })
+
+    if (rows != null) {
+      return res.status(409).send({ error: 'Username is already taken' })
+    }
+
+    const hashedpassword = await bcrypt.hash(req.body.password, 10)
+
+    const updateUser = await User.update(
+      { username: username, password: hashedpassword },
+      { where: { id: req.params.id } }
+    )
+    if (updateUser) {
+      res.send({ message: 'username and password updated', username })
+    } else {
+      throw Error
+    }
   } catch (e) {
-    res.status(400).send({ error: e.message })
+    res.status(404).send({ error: e.message })
   }
 })
 
-router.delete('/', auth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
-    const deleteUserStatement = `delete from users where id = $1 returning *`
+    const deleteUserStatement = await User.destroy({
+      where: { id: req.params.id },
+    })
 
-    const {
-      rows: [user],
-    } = await query(deleteUserStatement, [req.user.id])
-
-    if (!user) {
+    if (!deleteUserStatement) {
       return res.status(404).send({ error: 'Could not find user with that id' })
     }
-    res.send(getPublicUser(user))
+    return res.send({
+      message: 'deleted',
+    })
   } catch (e) {
     res.status(400).send({ error: e.message })
   }
