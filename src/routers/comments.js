@@ -105,7 +105,7 @@ router.post('/', auth, async (req, res) => {
 
     const newComment = await Comment.create({
       body: body,
-      userId: 1,
+      userId: 2,
       postId: post_id,
       commentId: parent_comment_id,
     })
@@ -115,7 +115,7 @@ router.post('/', auth, async (req, res) => {
     // Automatically upvote own comment
 
     const newCommentVote = await CommentVote.create({
-      userId: 1,
+      userId: 2,
       commentId: newComment.id,
       vote_value: 1,
     })
@@ -146,7 +146,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     if (
-      comment.userId !== 1 &&
+      comment.userId !== 2 &&
       (await checkModerator(comment.userId, subredditName)) === false
     ) {
       return res

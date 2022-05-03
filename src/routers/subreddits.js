@@ -71,7 +71,7 @@ router.post('/', auth, async (req, res) => {
     // `
 
     const newModerator = await Moderator.create({
-      userId: 1,
+      userId: 2,
       subredditId: newSubreddit.id,
     })
 
