@@ -138,7 +138,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     if (
-      comment.userId !== 2 &&
+      comment.userId !== req.body.userId &&
       (await checkModerator(comment.userId, subredditName)) === false
     ) {
       return res
@@ -156,40 +156,29 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params
-    const {
-      rows: [comment],
-    } = await query(selectCommentStatement, [id])
-    if (!comment) {
+    const { userId } = req.body
+
+    const commentData = await Comment.findByPk(id, {
+      include: [{ model: Post, include: [Subreddit] }],
+    })
+    console.log(commentData)
+    if (!commentData) {
       return res
         .status(404)
         .send({ error: 'Could not find comment with that id' })
     }
+
+    const subredditName = commentData.post.subreddit.name
     if (
-      comment.author_id !== req.user.id &&
-      (await userIsModerator(req.user.username, comment.subreddit_name)) ===
-        false
+      commentData.userId !== userId &&
+      (await checkModerator(commentData.userId, subredditName)) === false
     ) {
       return res
         .status(403)
         .send({ error: 'You must be the comment author to delete it' })
     }
-
-    // const deleteCommentStatement = `delete from comments where id = $1 returning *`
-    // const { rows: [deletedComment] } = await query(deleteCommentStatement, [id])
-
-    const setFieldsToNullStatement = `
-      update comments
-      set body = null,
-          author_id = null
-      where id = $1
-      returning *
-    `
-
-    const {
-      rows: [deletedComment],
-    } = await query(setFieldsToNullStatement, [id])
-
-    res.send(deletedComment)
+    await Comment.destroy({ where: { id } })
+    return res.status(200).send({ message: 'deleted' })
   } catch (e) {
     res.status(400).send({ error: e.message })
   }
