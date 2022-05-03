@@ -138,7 +138,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     if (
-      comment.userId !== 1 &&
+      comment.userId !== 2 &&
       (await checkModerator(comment.userId, subredditName)) === false
     ) {
       return res

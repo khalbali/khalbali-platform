@@ -6,6 +6,7 @@ const router = express.Router()
 const db = require('../db/index')
 const Vote = db.vote
 const commentVote = db.commentvote
+
 const checkVoteType = (voteType) => {
   const types = ['post', 'comment']
   let error
