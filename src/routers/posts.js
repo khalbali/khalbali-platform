@@ -25,21 +25,30 @@ router.get('/', optionalAuth, async (req, res) => {
         where: { subredditId: FoundData.id },
         attributes: {
           include: [
-            [Sequelize.fn('COUNT', Sequelize.col('comments')), 'PostVotes'],
+            [
+              Sequelize.fn('COUNT', Sequelize.col('comments.id')),
+              'PostComments',
+            ],
+            [
+              Sequelize.fn('SUM', Sequelize.col('votes.vote_value')),
+              'postVotes',
+            ],
           ],
         },
         include: [
           { model: User, attributes: ['username'] },
           { model: Subreddit, attributes: ['name'] },
-          { model: comments, attributes: ['body', 'id'] },
+          { model: comments, attributes: [] },
+          { model: PostVote, attributes: [] },
         ],
-        group: ['comments'],
+        group: ['comments.postId'],
+        group: ['votes.postId'],
       })
 
       if (FoundPost.length == 0) {
         return res.status(404).send('no post avaible with this name')
       } else {
-        return res.status(404).send(FoundPost)
+        return res.status(200).send(FoundPost)
       }
     }
   } catch (e) {
@@ -98,25 +107,11 @@ router.post('/', auth, async (req, res) => {
       subredditId: foundSubreddit.id,
     })
 
-    // const {
-    //   rows: [post],
-    // } = await query(createPostStatement, [
-    //   type,
-    //   title,
-    //   body,
-    //   req.user.id,
-    //   foundSubreddit.id,
-    // ])
-
     const newPostVote = await PostVote.create({
       vote_value: 1,
       postId: newpost.id,
-      userId: 2,
+      userId,
     })
-
-    // // Automatically upvote your own post
-    // const createVoteStatement = `insert into post_votes values ($1, $2, $3)`
-    // await query(createVoteStatement, [req.user.id, post.id, 1])
 
     res.status(201).send(newpost)
   } catch (e) {

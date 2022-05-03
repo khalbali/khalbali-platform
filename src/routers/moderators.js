@@ -40,9 +40,9 @@ router.post('/', auth, async (req, res) => {
       throw new Error('Must specify subreddit')
     }
 
-    if (await userIsModerator(req.user.username, subreddit) === false) {
+    if ((await userIsModerator(req.user.username, subreddit)) === false) {
       return res.status(403).send({
-        error: `You do not have permissions to add a moderator in the subreddit ${subreddit}`
+        error: `You do not have permissions to add a moderator in the subreddit ${subreddit}`,
       })
     }
 
@@ -54,13 +54,11 @@ router.post('/', auth, async (req, res) => {
       ) returning *
     `
 
-    const { rows: [insertedModerator] } = await query(insertModeratorStatement, [
-      username,
-      subreddit
-    ])
+    const {
+      rows: [insertedModerator],
+    } = await query(insertModeratorStatement, [username, subreddit])
 
     res.status(201).send(insertedModerator)
-
   } catch (e) {
     res.status(400).send({ error: e.message })
   }
@@ -76,9 +74,9 @@ router.delete('/', auth, async (req, res) => {
       throw new Error('Must specify subreddit')
     }
 
-    if (await userIsModerator(req.user.username, subreddit) === false) {
+    if ((await userIsModerator(req.user.username, subreddit)) === false) {
       return res.status(403).send({
-        error: `You do not have permissions to delete a moderator in the subreddit '${subreddit}'`
+        error: `You do not have permissions to delete a moderator in the subreddit '${subreddit}'`,
       })
     }
 
@@ -89,10 +87,9 @@ router.delete('/', auth, async (req, res) => {
       returning *
     `
 
-    const { rows: [deletedModerator] } = await query(deleteModeratorStatement, [
-      username,
-      subreddit
-    ])
+    const {
+      rows: [deletedModerator],
+    } = await query(deleteModeratorStatement, [username, subreddit])
 
     if (!deletedModerator) {
       return res.status(404).send({ error: 'Could not find that moderator' })
