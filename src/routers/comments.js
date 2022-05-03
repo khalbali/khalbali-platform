@@ -1,5 +1,5 @@
 const express = require('express')
-const { query } = require('../db')
+const { query, vote } = require('../db')
 const { updateTableRow, userIsModerator } = require('../db/utils')
 const auth = require('../middleware/auth')()
 const optionalAuth = require('../middleware/auth')(true)
@@ -63,8 +63,8 @@ router.get('/:post_id', optionalAuth, async (req, res) => {
       attributes: {
         include: [
           [
-            Sequelize.fn('COUNT', Sequelize.col('commentvotes.commentId')),
-            'CommentVotes',
+            Sequelize.fn('SUM', Sequelize.col('commentvotes.vote_value')),
+            'commentVotes',
           ],
         ],
       },
@@ -75,19 +75,11 @@ router.get('/:post_id', optionalAuth, async (req, res) => {
       group: ['commentvotes.commentId'],
     })
 
-    const voteCount = await PostVote.count({ where: { id: post_id } })
-
-    data = {
-      ...postData.dataValues,
-      voteCount,
-      commentData,
-    }
-
     if (!postData) {
       return res.status(404).send({ error: 'Could not find post with that id' })
     }
 
-    res.send({ postData, voteCount, commentData })
+    res.send({ postData, commentData })
   } catch (e) {
     res.status(500).send({ error: e.message })
   }
@@ -95,7 +87,7 @@ router.get('/:post_id', optionalAuth, async (req, res) => {
 
 router.post('/', auth, async (req, res) => {
   try {
-    const { body, post_id, parent_comment_id } = req.body
+    const { body, post_id, parent_comment_id, userId } = req.body
     if (!body) {
       throw new Error('Must specify comment body')
     }
@@ -105,7 +97,7 @@ router.post('/', auth, async (req, res) => {
 
     const newComment = await Comment.create({
       body: body,
-      userId: 2,
+      userId,
       postId: post_id,
       commentId: parent_comment_id,
     })
@@ -115,7 +107,7 @@ router.post('/', auth, async (req, res) => {
     // Automatically upvote own comment
 
     const newCommentVote = await CommentVote.create({
-      userId: 2,
+      userId,
       commentId: newComment.id,
       vote_value: 1,
     })
