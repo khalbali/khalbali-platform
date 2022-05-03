@@ -181,7 +181,7 @@ router.delete('/:id', auth, async (req, res) => {
         .send({ error: 'You must the comment author to edit it' })
     }
 
-    const deletedPost = await Post.destroy({ where: { id: id } })
+    await Post.destroy({ where: { id: id } })
 
     return res.send({ message: 'deleted' })
   } catch (e) {
