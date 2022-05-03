@@ -38,7 +38,7 @@ router.get('/', optionalAuth, async (req, res) => {
         include: [
           { model: User, attributes: ['username'] },
           { model: Subreddit, attributes: ['name'] },
-          { model: comments, attributes: ['body'] },
+          { model: comments, attributes: [] },
           { model: PostVote, attributes: [] },
         ],
         group: ['comments.postId'],
@@ -48,7 +48,7 @@ router.get('/', optionalAuth, async (req, res) => {
       if (FoundPost.length == 0) {
         return res.status(404).send('no post avaible with this name')
       } else {
-        return res.status(404).send(FoundPost)
+        return res.status(200).send(FoundPost)
       }
     }
   } catch (e) {
