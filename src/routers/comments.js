@@ -4,8 +4,15 @@ const { updateTableRow, userIsModerator } = require('../db/utils')
 const auth = require('../middleware/auth')()
 const optionalAuth = require('../middleware/auth')(true)
 const db = require('../db/index')
+const checkModerator = require('../helperFunctions/checkModerator')
+const { Sequelize } = require('sequelize')
 const Comment = db.comment
 const CommentVote = db.commentvote
+const Post = db.post
+const User = db.user
+const Subreddit = db.subreddit
+const PostVote = db.vote
+const Moderator = db.moderator
 
 const router = express.Router()
 
@@ -43,41 +50,44 @@ router.get('/', async (req, res) => {
 router.get('/:post_id', optionalAuth, async (req, res) => {
   try {
     const { post_id } = req.params
-    const selectPostStatement = `
-      select
-      p.id, p.type, p.title, p.body, p.created_at, p.updated_at,
-      max(u.username) author_name,
-      cast(coalesce(sum(pv.vote_value), 0) as int) votes,
-      max(upv.vote_value) has_voted,
-      max(sr.name) subreddit_name
-      from posts p
-      left join users u on p.author_id = u.id
-      inner join subreddits sr on p.subreddit_id = sr.id
-      left join post_votes pv on p.id = pv.post_id
-      left join post_votes upv on upv.post_id = p.id and upv.user_id = $1
-      group by p.id
-      having p.id = $2
-    `
+    const postData = await Post.findOne({
+      where: { id: post_id },
+      include: [
+        { model: User, attributes: ['username'] },
+        { model: Subreddit, attributes: ['name'] },
+      ],
+    })
 
-    const selectCommentsStatement = `
-      ${selectAllCommentsStatement}
-      having c.post_id = $2
-      order by votes desc
-    `
-    const user_id = req.user ? req.user.id : -1
-    const {
-      rows: [post],
-    } = await query(selectPostStatement, [user_id, post_id])
-    const { rows: comments } = await query(selectCommentsStatement, [
-      user_id,
-      post_id,
-    ])
+    const commentData = await Comment.findAll({
+      where: { postId: post_id },
+      attributes: {
+        include: [
+          [
+            Sequelize.fn('COUNT', Sequelize.col('commentvotes.commentId')),
+            'CommentVotes',
+          ],
+        ],
+      },
+      include: [
+        { model: CommentVote, attributes: [] },
+        { model: User, attributes: ['username'] },
+      ],
+      group: ['commentvotes.commentId'],
+    })
 
-    if (!post) {
+    const voteCount = await PostVote.count({ where: { id: post_id } })
+
+    data = {
+      ...postData.dataValues,
+      voteCount,
+      commentData,
+    }
+
+    if (!postData) {
       return res.status(404).send({ error: 'Could not find post with that id' })
     }
 
-    res.send({ post, comments })
+    res.send({ postData, voteCount, commentData })
   } catch (e) {
     res.status(500).send({ error: e.message })
   }
@@ -122,32 +132,30 @@ router.put('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params
 
-    const {
-      rows: [comment],
-    } = await query(selectCommentStatement, [id])
+    const comment = await Comment.findOne({
+      where: { id },
+      include: [{ model: Post, include: [Subreddit] }],
+    })
+
+    const subredditName = comment.post.subreddit.name
+
     if (!comment) {
       return res
         .status(404)
         .send({ error: 'Could not find comment with that id' })
     }
+
     if (
-      comment.author_id !== req.user.id &&
-      (await userIsModerator(req.user.username, comment.subreddit_name)) ===
-        false
+      comment.userId !== 1 &&
+      (await checkModerator(comment.userId, subredditName)) === false
     ) {
       return res
         .status(403)
         .send({ error: 'You must the comment author to edit it' })
     }
 
-    const updatedComment = await updateTableRow(
-      'comments',
-      id,
-      ['body'],
-      req.body
-    )
-
-    res.send(updatedComment)
+    const updatedComment = await comment.update(req.body)
+    return res.send(updatedComment)
   } catch (e) {
     res.status(400).send({ error: e.message })
   }
