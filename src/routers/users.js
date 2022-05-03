@@ -94,10 +94,10 @@ router.post('/', async (req, res) => {
       password: hashedPassword,
     })
 
-    newUser.save()
-
-    return res.status(201).send({
-      id: user.id,
+    newUser.save().then()
+    console.log('hh')
+    return res.status(200).send({
+      id: newUser.id,
       username: newUser.username,
     })
   } catch (e) {
