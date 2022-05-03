@@ -25,15 +25,24 @@ router.get('/', optionalAuth, async (req, res) => {
         where: { subredditId: FoundData.id },
         attributes: {
           include: [
-            [Sequelize.fn('COUNT', Sequelize.col('comments')), 'PostVotes'],
+            [
+              Sequelize.fn('COUNT', Sequelize.col('comments.id')),
+              'PostComments',
+            ],
+            [
+              Sequelize.fn('SUM', Sequelize.col('votes.vote_value')),
+              'postVotes',
+            ],
           ],
         },
         include: [
           { model: User, attributes: ['username'] },
           { model: Subreddit, attributes: ['name'] },
-          { model: comments, attributes: ['body', 'id'] },
+          { model: comments, attributes: ['body'] },
+          { model: PostVote, attributes: [] },
         ],
-        group: ['comments'],
+        group: ['comments.postId'],
+        group: ['votes.postId'],
       })
 
       if (FoundPost.length == 0) {
