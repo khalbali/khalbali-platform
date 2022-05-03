@@ -1,6 +1,4 @@
 const express = require('express')
-const { query, comment, sequelize } = require('../db')
-const { updateTableRow } = require('../db/utils')
 const auth = require('../middleware/auth')()
 const optionalAuth = require('../middleware/auth')(true)
 const db = require('../db/index')
