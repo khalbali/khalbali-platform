@@ -37,7 +37,7 @@ router.get('/:name', async (req, res) => {
 
 router.post('/', auth, async (req, res) => {
   try {
-    const { name, description } = req.body
+    const { name, description, userId } = req.body
     console.log(req.body)
     const nameRegex = new RegExp('^[a-z0-9]+$', 'i')
 
@@ -54,24 +54,8 @@ router.post('/', auth, async (req, res) => {
 
     newSubreddit.save()
 
-    // let subreddit
-    // try {
-    //   ;({
-    //     rows: [subreddit],
-    //   } = await query(insertSubredditStatement, [name, description]))
-    // } catch (e) {
-    //   res
-    //     .status(409)
-    //     .send({ error: 'A subreddit with that name already exists' })
-    // }
-
-    // const insertModeratorStatement = `
-    //   insert into moderators(user_id, subreddit_id)
-    //   values($1, $2)
-    // `
-
     const newModerator = await Moderator.create({
-      userId: 1,
+      userId,
       subredditId: newSubreddit.id,
     })
 

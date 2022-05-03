@@ -88,7 +88,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', auth, async (req, res) => {
   try {
-    const { type, title, body, subreddit } = req.body
+    const { type, title, body, subreddit, userId } = req.body
     if (!type) {
       throw new Error('Must specify post type')
     }
@@ -124,29 +124,15 @@ router.post('/', auth, async (req, res) => {
       type,
       title,
       body,
-      userId: 1,
+      userId,
       subredditId: foundSubreddit.id,
     })
-
-    // const {
-    //   rows: [post],
-    // } = await query(createPostStatement, [
-    //   type,
-    //   title,
-    //   body,
-    //   req.user.id,
-    //   foundSubreddit.id,
-    // ])
 
     const newPostVote = await PostVote.create({
       vote_value: 1,
       postId: newpost.id,
-      userId: 1,
+      userId,
     })
-
-    // // Automatically upvote your own post
-    // const createVoteStatement = `insert into post_votes values ($1, $2, $3)`
-    // await query(createVoteStatement, [req.user.id, post.id, 1])
 
     res.status(201).send(newpost)
   } catch (e) {
