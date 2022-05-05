@@ -2,8 +2,6 @@ const express = require('express')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
-const { updateTableRow } = require('../db/utils')
-//cons = require('../middlewar')()
 const db = require('../db/index')
 const { json } = require('express')
 const router = express.Router()
@@ -97,7 +95,7 @@ router.post('/', async (req, res) => {
     newUser.save()
 
     return res.status(201).send({
-      id: user.id,
+      id: newUser.id,
       username: newUser.username,
     })
   } catch (e) {
