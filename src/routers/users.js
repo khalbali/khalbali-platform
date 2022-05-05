@@ -1,10 +1,11 @@
 const express = require('express')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
+
 function isLoggedIn(req, res, next) {
   req.user ? next() : res.sendStatus(401)
 }
-//cons = require('../middlewar')()
+
 const db = require('../db/index')
 const { json } = require('express')
 const router = express.Router()
@@ -95,9 +96,11 @@ router.post('/', async (req, res) => {
       password: hashedPassword,
     })
 
+
     newUser.save().then()
     console.log('hh')
     return res.status(200).send({
+
       id: newUser.id,
       username: newUser.username,
     })

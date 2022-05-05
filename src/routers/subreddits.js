@@ -1,5 +1,4 @@
 const express = require('express')
-const { query, moderator } = require('../db')
 const auth = require('../middleware/auth')()
 
 const db = require('../db/index')
@@ -9,9 +8,8 @@ const router = express.Router()
 
 router.get('/', async (req, res) => {
   try {
-    const selectSubredditsStatement = `select * from subreddits`
-    const { rows } = await query(selectSubredditsStatement)
-    res.send(rows)
+    const allSubreddits = await Subreddit.findAll()
+    res.send(allSubreddits)
   } catch (e) {
     res.status(500).send({ error: e.message })
   }
@@ -20,16 +18,11 @@ router.get('/', async (req, res) => {
 router.get('/:name', async (req, res) => {
   try {
     const { name } = req.params
-    const selectSubredditStatement = `select * from subreddits where name = $1`
-    const {
-      rows: [subreddit],
-    } = await query(selectSubredditStatement, [name])
-
-    if (!subreddit) {
+    const subredditData = await Subreddit.findOne({ where: { name: name } })
+    if (!subredditData) {
       res.status(404).send({ error: 'Could not find subreddit with that name' })
     }
-
-    res.send(subreddit)
+    res.send(subredditData)
   } catch (e) {
     res.status(500).send({ error: e.message })
   }
@@ -58,8 +51,6 @@ router.post('/', auth, async (req, res) => {
       userId,
       subredditId: newSubreddit.id,
     })
-
-    // await query(insertModeratorStatement, [req.user.id, subreddit.id])
 
     res.send(newSubreddit)
   } catch (e) {

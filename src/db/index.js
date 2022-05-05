@@ -51,6 +51,7 @@ db.user.hasMany(db.vote)
 db.user.hasMany(db.moderator)
 db.subreddit.hasMany(db.moderator)
 db.moderator.belongsTo(db.subreddit)
+db.moderator.belongsTo(db.user)
 db.comment.hasMany(db.commentvote)
 db.user.hasMany(db.commentvote)
 

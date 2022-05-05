@@ -1,6 +1,4 @@
 const express = require('express')
-const { query, comment, sequelize } = require('../db')
-const { updateTableRow } = require('../db/utils')
 const auth = require('../middleware/auth')()
 const optionalAuth = require('../middleware/auth')(true)
 const db = require('../db/index')
@@ -12,6 +10,7 @@ const comments = db.comment
 const router = express.Router()
 const User = db.user
 const Sequelize = require('sequelize')
+const checkModerator = require('../helperFunctions/checkModerator')
 router.get('/', optionalAuth, async (req, res) => {
   try {
     const { subreddit } = req.query
@@ -60,9 +59,22 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
     const { userId } = req.body
-    //console.log(user_id)
+
     const foundPost = await Post.findOne({
       where: [{ id: id }, { userId: userId }],
+      attributes: {
+        include: [
+          [
+            Sequelize.fn('SUM', Sequelize.col('commentvotes.vote_value')),
+            'commentVotes',
+          ],
+        ],
+      },
+      include: [
+        { model: CommentVote, attributes: [] },
+        { model: User, attributes: ['username'] },
+      ],
+      group: ['commentvotes.commentId'],
     })
 
     if (!foundPost) {
@@ -119,42 +131,29 @@ router.post('/', auth, async (req, res) => {
   }
 })
 
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const selectPostStatement = `select * from posts where id = $1`
-    const {
-      rows: [post],
-    } = await query(selectPostStatement, [id])
+
+    const post = await Post.findByPk(id, {
+      include: [{ model: Subreddit, attributes: ['name'] }],
+    })
 
     if (!post) {
       return res.status(404).send({ error: 'Could not find post with that id' })
     }
-    if (post.author_id !== req.user.id) {
+    if (
+      post.userId !== req.body.userId &&
+      (await checkModerator(post.userId, post.subreddit.name)) === false
+    ) {
       return res
         .status(403)
-        .send({ error: 'You must be the post creator to edit it' })
+        .send({ error: 'You must the comment author to edit it' })
     }
 
-    let allowedUpdates
-    switch (post.type) {
-      case 'text':
-        allowedUpdates = ['title', 'body']
-        break
-      case 'link':
-        allowedUpdates = ['title']
-        break
-      default:
-        allowedUpdates = []
-    }
+    const updatedPost = await post.update(req.body)
 
-    const updatedPost = await updateTableRow(
-      'posts',
-      id,
-      allowedUpdates,
-      req.body
-    )
-    res.send(updatedPost)
+    return res.send(updatedPost)
   } catch (e) {
     res.status(400).send({ error: e.message })
   }
@@ -163,37 +162,26 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params
-    const selectPostStatement = `select * from posts where id = $1`
-    const {
-      rows: [post],
-    } = await query(selectPostStatement, [id])
+
+    const post = await Post.findByPk(id, {
+      include: [{ model: Subreddit, attributes: ['name'] }],
+    })
 
     if (!post) {
       return res.status(404).send({ error: 'Could not find post with that id' })
     }
-    if (post.author_id !== req.user.id) {
+    if (
+      post.userId !== req.body.userId &&
+      (await checkModerator(post.userId, post.subreddit.name)) === false
+    ) {
       return res
-        .status(401)
-        .send({ error: 'You must be the post creator to delete it' })
+        .status(403)
+        .send({ error: 'You must the comment author to edit it' })
     }
 
-    // const deletePostStatement = `delete from posts where id = $1 returning *`
-    // const { rows: [deletedPost] } = await query(deletePostStatement, [id])
-    // res.send(deletedPost)
+    await Post.destroy({ where: { id: id } })
 
-    const setFieldsToNullStatement = `
-      update posts
-      set title = null,
-          body = null,
-          author_id = null
-      where id = $1
-      returning *
-    `
-
-    const {
-      rows: [deletedPost],
-    } = await query(setFieldsToNullStatement, [id])
-    res.send(deletedPost)
+    return res.send({ message: 'deleted' })
   } catch (e) {
     res.status(400).send({ error: e.message })
   }

@@ -6,6 +6,10 @@ const checkModerator = async (userId, subredditName) => {
     where: { userId },
     include: [{ model: Subreddit }],
   })
+
+  if (moderatorData === null) {
+    return false
+  }
   return moderatorData.subreddit.name === subredditName
 }
 
