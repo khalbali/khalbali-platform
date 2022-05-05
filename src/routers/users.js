@@ -2,6 +2,10 @@ const express = require('express')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
+function isLoggedIn(req, res, next) {
+  req.user ? next() : res.sendStatus(401)
+}
+
 const db = require('../db/index')
 const { json } = require('express')
 const router = express.Router()
@@ -27,7 +31,7 @@ const addToken = async (userid) => {
   return { user, token }
 }
 
-router.get('/', async (req, res) => {
+router.get('/', isLoggedIn, async (req, res) => {
   try {
     const rows = await User.findAll()
 
@@ -92,9 +96,11 @@ router.post('/', async (req, res) => {
       password: hashedPassword,
     })
 
-    newUser.save()
 
-    return res.status(201).send({
+    newUser.save().then()
+    console.log('hh')
+    return res.status(200).send({
+
       id: newUser.id,
       username: newUser.username,
     })
@@ -140,22 +146,13 @@ router.post('/login', async (req, res) => {
   }
 })
 
-router.post('/logout', async (req, res) => {
-  const tokens = req.user.tokens.filter((token) => token !== req.token)
-  const setUserTokensStatement = `
-    update users
-    set tokens = $1
-    where id = $2
-  `
-  const {
-    rows: [user],
-  } = await query(setUserTokensStatement, [tokens, req.user.id])
-  delete req.user
-  delete req.token
-  res.send(user)
+router.get('/logout', async (req, res) => {
+  req.logOut()
+
+  res.send('loggedout')
 })
 
-router.post('/logoutAll', async (req, res) => {
+router.get('/logoutAll', async (req, res) => {
   const clearUserTokensStatement = `
     update users
     set tokens = '{}'
