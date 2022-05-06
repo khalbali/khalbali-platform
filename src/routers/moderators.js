@@ -4,7 +4,8 @@ const db = require('../db/index')
 const User = db.user
 const Subreddit = db.subreddit
 const Moderator = db.moderator
-const auth = require('../middleware/auth')()
+
+const isAuthenticated = require('../middleware/isAuthenticated')
 
 const router = express.Router()
 
@@ -47,7 +48,7 @@ router.get('/', async (req, res) => {
   }
 })
 
-router.post('/', auth, async (req, res) => {
+router.post('/', isAuthenticated, async (req, res) => {
   try {
     const { userId, username, subreddit } = req.body
 
@@ -89,7 +90,7 @@ router.post('/', auth, async (req, res) => {
   }
 })
 
-router.delete('/', auth, async (req, res) => {
+router.delete('/', isAuthenticated, async (req, res) => {
   try {
     const { userId, username, subreddit } = req.body
     if (!username) {

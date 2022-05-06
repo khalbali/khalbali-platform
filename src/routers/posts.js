@@ -1,8 +1,7 @@
 const express = require('express')
-const auth = require('../middleware/auth')()
-const optionalAuth = require('../middleware/auth')(true)
 const db = require('../db/index')
-const commentVotes = require('../models/commentVotes')
+
+const isAuthenticated = require('../middleware/isAuthenticated')
 const Subreddit = db.subreddit
 const Post = db.post
 const PostVote = db.vote
@@ -11,7 +10,8 @@ const router = express.Router()
 const User = db.user
 const Sequelize = require('sequelize')
 const checkModerator = require('../helperFunctions/checkModerator')
-router.get('/', optionalAuth, async (req, res) => {
+
+router.get('/', async (req, res) => {
   try {
     const { subreddit } = req.query
     const FoundData = await Subreddit.findOne({
@@ -87,7 +87,7 @@ router.get('/:id', async (req, res) => {
   }
 })
 
-router.post('/', auth, async (req, res) => {
+router.post('/', isAuthenticated, async (req, res) => {
   try {
     const { type, title, body, subreddit, userId } = req.body
     if (!type) {
@@ -159,7 +159,7 @@ router.put('/:id', async (req, res) => {
   }
 })
 
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params
 

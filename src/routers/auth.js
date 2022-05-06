@@ -7,7 +7,7 @@ require('../passport/passport')
 router.get(
   '/google',
   passport.authenticate('google', {
-    scope: ['username', 'id'],
+    scope: ['profile', 'email'],
   })
 )
 

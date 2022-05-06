@@ -1,6 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 const session = require('express-session')
+const cookieParser = require('cookie-parser')
 // After you declare "app"
 
 const usersRouter = require('./routers/users')
@@ -14,9 +15,12 @@ const auth = require('./routers/auth')
 const port = process.env.PORT || 5000
 
 const app = express()
-app.use(session({ secret: 'what' }))
 app.use(cors())
+app.use(cookieParser())
 app.use(express.json())
+app.use(
+  session({ secret: 'keyboard cat', resave: true, saveUninitialized: true })
+)
 app.use(passport.initialize())
 app.use(passport.session())
 

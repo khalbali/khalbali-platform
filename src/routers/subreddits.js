@@ -1,6 +1,5 @@
 const express = require('express')
-const auth = require('../middleware/auth')()
-
+const isAuthenticated = require('../middleware/isAuthenticated')
 const db = require('../db/index')
 const Subreddit = db.subreddit
 const Moderator = db.moderator
@@ -28,7 +27,7 @@ router.get('/:name', async (req, res) => {
   }
 })
 
-router.post('/', auth, async (req, res) => {
+router.post('/', isAuthenticated, async (req, res) => {
   try {
     const { name, description, userId } = req.body
     console.log(req.body)

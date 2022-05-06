@@ -1,8 +1,5 @@
 const express = require('express')
-const { query, vote } = require('../db')
-const { updateTableRow, userIsModerator } = require('../db/utils')
-const auth = require('../middleware/auth')()
-const optionalAuth = require('../middleware/auth')(true)
+const isAuthenticated = require('../middleware/isAuthenticated')
 const db = require('../db/index')
 const checkModerator = require('../helperFunctions/checkModerator')
 const { Sequelize } = require('sequelize')
@@ -16,38 +13,16 @@ const Moderator = db.moderator
 
 const router = express.Router()
 
-const selectCommentStatement = `
-  select c.id, c.author_id, c.post_id, c.parent_comment_id, sr.name subreddit_name
-  from comments c
-  inner join posts p on c.post_id = p.id
-  inner join subreddits sr on p.subreddit_id = sr.id
-  where c.id = $1
-`
-
-const selectAllCommentsStatement = `
-  select
-  c.id, c.body, c.post_id, c.parent_comment_id, c.created_at, c.updated_at,
-  max(u.username) author_name,
-  cast(coalesce(sum(cv.vote_value), 0) as int) votes,
-  max(ucv.vote_value) has_voted
-  from comments c
-  left join users u on c.author_id = u.id
-  left join comment_votes cv on c.id = cv.comment_id
-  left join comment_votes ucv on ucv.comment_id = c.id and ucv.user_id = $1
-  group by c.id
-`
-
 router.get('/', async (req, res) => {
   try {
-    const selectCommentsStatement = `select * from comments`
-    const { rows } = await query(selectCommentsStatement)
-    res.send(rows)
+    const commentData = await Comment.findAll()
+    res.send(commentData)
   } catch (e) {
     res.status(500).send({ error: e.message })
   }
 })
 
-router.get('/:post_id', optionalAuth, async (req, res) => {
+router.get('/:post_id', async (req, res) => {
   try {
     const { post_id } = req.params
     const postData = await Post.findOne({
@@ -85,7 +60,7 @@ router.get('/:post_id', optionalAuth, async (req, res) => {
   }
 })
 
-router.post('/', auth, async (req, res) => {
+router.post('/', isAuthenticated, async (req, res) => {
   try {
     const { body, post_id, parent_comment_id, userId } = req.body
     if (!body) {
@@ -120,7 +95,7 @@ router.post('/', auth, async (req, res) => {
   }
 })
 
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params
 
@@ -153,7 +128,7 @@ router.put('/:id', auth, async (req, res) => {
   }
 })
 
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params
     const { userId } = req.body

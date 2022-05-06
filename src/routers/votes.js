@@ -1,6 +1,5 @@
 const express = require('express')
-
-const auth = require('../middleware/auth')()
+const isAuthenticated = require('../middleware/isAuthenticated')
 
 const router = express.Router()
 const db = require('../db/index')
@@ -74,7 +73,7 @@ router.get('/:voteType', async (req, res) => {
   }
 })
 
-router.post('/:voteType', auth, async (req, res) => {
+router.post('/:voteType', isAuthenticated, async (req, res) => {
   try {
     const { voteType, error: voteTypeError } = checkVoteType(
       req.params.voteType
