@@ -8,8 +8,7 @@ const CommentVote = db.commentvote
 const Post = db.post
 const User = db.user
 const Subreddit = db.subreddit
-const PostVote = db.vote
-const Moderator = db.moderator
+
 
 const router = express.Router()
 

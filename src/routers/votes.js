@@ -147,40 +147,6 @@ router.post('/:voteType', isAuthenticated, async (req, res) => {
   }
 })
 
-// PUT route is no longer needed, as the POST route
-// now also updates if it runs into a conflict
 
-// router.put('/:voteType/:item_id', auth, async (req, res) => {
-//   try {
-//     const { voteType, error: voteTypeError } = checkVoteType(req.params.voteType)
-//     if (voteTypeError) {
-//       return res.status(400).send({ error: voteTypeError })
-//     }
-//     const { item_id } = req.params
-//     const { vote_value } = req.body
-
-//     const { status, error } = await checkVoteValid(item_id, vote_value, voteType)
-//     if (error) {
-//       return res.status(status).send({ error })
-//     }
-
-//     const updateItemVoteStatement = `
-//       update ${voteType}_votes
-//       set vote_value = $1
-//       where user_id = $2 and ${voteType}_id = $3
-//       returning *
-//     `
-
-//     const { rows: [item_vote] } = await query(updateItemVoteStatement, [
-//       vote_value,
-//       req.user.id,
-//       item_id
-//     ])
-
-//     res.send(item_vote)
-//   } catch (e) {
-//     res.status(500).send({ error: e.message })
-//   }
-// })
 
 module.exports = router
