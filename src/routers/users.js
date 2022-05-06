@@ -4,16 +4,9 @@ const bcrypt = require('bcrypt')
 const isAuthenticated = require('../middleware/isAuthenticated')
 require('../passport/passport')
 const passport = require('passport')
-
 const db = require('../db/index')
-
 const router = express.Router()
 const User = db.user
-const getPublicUser = (user) => {
-  delete user.password
-  delete user.tokens
-  return user
-}
 
 router.get('/', isAuthenticated, async (req, res) => {
   try {
@@ -95,54 +88,39 @@ router.post('/register', async (req, res) => {
 router.get('/logout', async (req, res) => {
   req.logOut()
   res.send('loggedout')
-})
+}) /
+  router.put('/:id', async (req, res) => {
+    try {
+      console.log(req.params.id)
+      const { username, password } = req.body
+      if (!username) {
+        throw new Error('Username is required')
+      }
+      if (!password) {
+        throw new Error('Password is required')
+      }
 
-// router.get('/logoutAll', async (req, res) => {
-//   const clearUserTokensStatement = `
-//     update users
-//     set tokens = '{}'
-//     where id = $1
-//   `
-//   const {
-//     rows: [user],
-//   } = await query(clearUserTokensStatement, [req.user.id])
-//   delete req.user
-//   delete req.token
-//   res.send(user)
-// })
+      const rows = await User.findOne({ where: { username: username } })
 
-router.put('/:id', async (req, res) => {
-  try {
-    console.log(req.params.id)
-    const { username, password } = req.body
-    if (!username) {
-      throw new Error('Username is required')
+      if (rows != null) {
+        return res.status(409).send({ error: 'Username is already taken' })
+      }
+
+      const hashedpassword = await bcrypt.hash(req.body.password, 10)
+
+      const updateUser = await User.update(
+        { username: username, password: hashedpassword },
+        { where: { id: req.params.id } }
+      )
+      if (updateUser) {
+        res.send({ message: 'username and password updated', username })
+      } else {
+        throw Error
+      }
+    } catch (e) {
+      res.status(404).send({ error: e.message })
     }
-    if (!password) {
-      throw new Error('Password is required')
-    }
-
-    const rows = await User.findOne({ where: { username: username } })
-
-    if (rows != null) {
-      return res.status(409).send({ error: 'Username is already taken' })
-    }
-
-    const hashedpassword = await bcrypt.hash(req.body.password, 10)
-
-    const updateUser = await User.update(
-      { username: username, password: hashedpassword },
-      { where: { id: req.params.id } }
-    )
-    if (updateUser) {
-      res.send({ message: 'username and password updated', username })
-    } else {
-      throw Error
-    }
-  } catch (e) {
-    res.status(404).send({ error: e.message })
-  }
-})
+  })
 
 router.delete('/:id', async (req, res) => {
   try {
