@@ -1,16 +1,16 @@
-const express = require('express')
-const bcrypt = require('bcrypt')
+const express = require("express");
+const bcrypt = require("bcrypt");
 
-const isAuthenticated = require('../middleware/isAuthenticated')
-require('../passport/passport')
-const passport = require('passport')
-const db = require('../db/index')
-const router = express.Router()
-const User = db.user
+const isAuthenticated = require("../middleware/isAuthenticated");
+require("../passport/passport");
+const passport = require("passport");
+const db = require("../db/index");
+const router = express.Router();
+const User = db.user;
 
-router.get('/', isAuthenticated, async (req, res) => {
+router.get("/", isAuthenticated, async (req, res) => {
   try {
-    const rows = await User.findAll()
+    const rows = await User.findAll();
 
     const data = rows.map((user) => {
       const values = {
@@ -18,125 +18,131 @@ router.get('/', isAuthenticated, async (req, res) => {
         username: user.username,
         updatedAT: user.updatedAt,
         createdAt: user.createdAt,
-      }
-      return values
-    })
+      };
+      return values;
+    });
 
-    res.send(data)
+    res.send(data);
   } catch (e) {
-    res.status(500).send({ error: e.message })
+    res.status(500).send({ error: e.message });
   }
-})
+});
 
-router.get('/:id', async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
-    const { id } = req.params
+    const { id } = req.params;
 
-    const user = await User.findByPk(id)
+    const user = await User.findByPk(id);
 
     if (!user) {
-      return res.status(404).send({ error: 'Could not find user with that id' })
+      return res
+        .status(404)
+        .send({ error: "Could not find user with that id" });
     } else {
       const values = {
         id: user.id,
         username: user.username,
         updatedAT: user.updatedAt,
         createdAt: user.createdAt,
-      }
-      res.send(values)
+      };
+      res.send(values);
     }
   } catch (e) {
-    res.status(500).send({ error: e.message })
+    res.status(500).send({ error: e.message });
   }
-})
+});
 
-router.post('/login', passport.authenticate('local-signup'), (req, res) => {
-  res.json({ message: 'Success', username: req.user })
-})
+router.post("/login", passport.authenticate("local-signup"), (req, res) => {
+  res.json({ message: "Success", username: req.user });
+});
 
-router.post('/register', async (req, res) => {
+router.post("/register", async (req, res) => {
   try {
-    const { username, password } = req.body
+    const { username, password } = req.body;
+
+    console.log(req.body);
 
     if (!username || !password) {
-      throw new Error('Username and password are required')
+      throw new Error("Username and password are required");
     }
 
     const selectUserStatement = await User.findOne({
       where: { username: username },
-    })
+    });
 
     if (selectUserStatement) {
-      return res.status(401).send({ error: 'username taken' })
+      return res.status(401).send({ error: "username taken" });
     }
-    console.log(password)
+    console.log(password);
 
-    const userPass = await bcrypt.hash(password, 10)
-    console.log(userPass)
+    const userPass = await bcrypt.hash(password, 10);
+    console.log(userPass);
 
     const user = await User.create({
       username,
       password: userPass,
-    })
+    });
 
-    res.send(user)
+    res.send(user);
   } catch (e) {
-    res.status(400).send({ error: e.message })
+    res.status(400).send({ error: e.message });
   }
-})
+});
 
-router.get('/logout', async (req, res) => {
-  req.logOut()
-  res.send('loggedout')
+router.get("/logout", async (req, res) => {
+  req.logOut();
+  res.send("loggedout");
 }) /
-  router.put('/:id', async (req, res) => {
+  router.put("/:id", async (req, res) => {
     try {
-      console.log(req.params.id)
-      const { username, password } = req.body
+      console.log(req.params.id);
+      const { username, password } = req.body;
       if (!username) {
-        throw new Error('Username is required')
+        throw new Error("Username is required");
       }
       if (!password) {
-        throw new Error('Password is required')
+        throw new Error("Password is required");
       }
 
-      const rows = await User.findOne({ where: { username: username } })
+      const rows = await User.findOne({ where: { username: username } });
 
       if (rows != null) {
-        return res.status(409).send({ error: 'Username is already taken' })
+        return res.status(409).send({ error: "Username is already taken" });
       }
 
-      const hashedpassword = await bcrypt.hash(req.body.password, 10)
+      const hashedpassword = await bcrypt.hash(req.body.password, 10);
 
       const updateUser = await User.update(
         { username: username, password: hashedpassword },
         { where: { id: req.params.id } }
-      )
+      );
       if (updateUser) {
-        res.send({ message: 'username and password updated', username })
+        res.send({ message: "username and password updated", username });
       } else {
-        throw Error
+        throw Error;
       }
     } catch (e) {
-      res.status(404).send({ error: e.message })
+      res.status(404).send({ error: e.message });
     }
-  })
+  });
 
-router.delete('/:id', async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const deleteUserStatement = await User.destroy({
       where: { id: req.params.id },
-    })
+    });
 
     if (!deleteUserStatement) {
-      return res.status(404).send({ error: 'Could not find user with that id' })
+      return res
+        .status(404)
+        .send({ error: "Could not find user with that id" });
     }
     return res.send({
-      message: 'deleted',
-    })
+      message: "deleted",
+    });
   } catch (e) {
-    res.status(400).send({ error: e.message })
+    res.status(400).send({ error: e.message });
   }
-})
+});
 
-module.exports = router
+module.exports = router;
