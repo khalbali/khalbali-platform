@@ -5,8 +5,7 @@ const { Sequelize, DataTypes } = require('sequelize')
 const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
   host: '127.0.0.1',
   dialect: dbConfig.dialect,
-  operatorsAliases: false,
-
+  operatorsAliases: 0,
   pool: {
     max: dbConfig.pool.max,
     min: dbConfig.pool.min,
