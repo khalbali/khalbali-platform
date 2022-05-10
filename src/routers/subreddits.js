@@ -1,14 +1,14 @@
 const express = require('express')
-const { query } = require('../db')
-const auth = require('../middleware/auth')()
-
+const isAuthenticated = require('../middleware/isAuthenticated')
+const db = require('../db/index')
+const Subreddit = db.subreddit
+const Moderator = db.moderator
 const router = express.Router()
 
 router.get('/', async (req, res) => {
   try {
-    const selectSubredditsStatement = `select * from subreddits`
-    const { rows } = await query(selectSubredditsStatement)
-    res.send(rows)
+    const allSubreddits = await Subreddit.findAll()
+    res.send(allSubreddits)
   } catch (e) {
     res.status(500).send({ error: e.message })
   }
@@ -17,25 +17,20 @@ router.get('/', async (req, res) => {
 router.get('/:name', async (req, res) => {
   try {
     const { name } = req.params
-    const selectSubredditStatement = `select * from subreddits where name = $1`
-    const {
-      rows: [subreddit],
-    } = await query(selectSubredditStatement, [name])
-
-    if (!subreddit) {
+    const subredditData = await Subreddit.findOne({ where: { name: name } })
+    if (!subredditData) {
       res.status(404).send({ error: 'Could not find subreddit with that name' })
     }
-
-    res.send(subreddit)
+    res.send(subredditData)
   } catch (e) {
     res.status(500).send({ error: e.message })
   }
 })
 
-router.post('/', auth, async (req, res) => {
+router.post('/', isAuthenticated, async (req, res) => {
   try {
-    const { name, description } = req.body
-
+    const { name, description, userId } = req.body
+    console.log(req.body)
     const nameRegex = new RegExp('^[a-z0-9]+$', 'i')
 
     if (!nameRegex.test(name)) {
@@ -44,31 +39,19 @@ router.post('/', auth, async (req, res) => {
       )
     }
 
-    const insertSubredditStatement = `
-      insert into subreddits(name, description)
-      values($1, $2)
-      returning *
-    `
+    const newSubreddit = await Subreddit.create({
+      name,
+      description,
+    })
 
-    let subreddit
-    try {
-      ;({
-        rows: [subreddit],
-      } = await query(insertSubredditStatement, [name, description]))
-    } catch (e) {
-      res
-        .status(409)
-        .send({ error: 'A subreddit with that name already exists' })
-    }
+    newSubreddit.save()
 
-    const insertModeratorStatement = `
-      insert into moderators(user_id, subreddit_id)
-      values($1, $2)
-    `
+    const newModerator = await Moderator.create({
+      userId,
+      subredditId: newSubreddit.id,
+    })
 
-    await query(insertModeratorStatement, [req.user.id, subreddit.id])
-
-    res.send(subreddit)
+    res.send(newSubreddit)
   } catch (e) {
     res.status(400).send({ error: e.message })
   }

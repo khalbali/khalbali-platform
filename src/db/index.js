@@ -1,22 +1,61 @@
-const { Pool } = require('pg')
+const dbConfig = require('./dbConfig.js')
 
-const devConfig = {
-  host: process.env.PG_HOST,
-  port: process.env.PG_PORT,
-  database: process.env.PG_DBNAME,
-  user: process.env.PG_USER,
-  password: process.env.PG_PASSWORD,
-}
+const { Sequelize, DataTypes } = require('sequelize')
 
-const prodConfig = {
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-}
+const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
+  host: '127.0.0.1',
+  dialect: dbConfig.dialect,
+  operatorsAliases: 0,
+  pool: {
+    max: dbConfig.pool.max,
+    min: dbConfig.pool.min,
+    acquire: dbConfig.pool.acquire,
+    idle: dbConfig.pool.idle,
+  },
+})
 
-const pool = new Pool(process.env.NODE_ENV === 'production' ? prodConfig : devConfig)
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log('connected..')
+  })
+  .catch((err) => {
+    console.log('Error' + err.message)
+  })
 
-module.exports = {
-  query: (text, params) => {
-    return pool.query(text, params)
-  }
-}
+const db = {}
+
+db.Sequelize = Sequelize
+db.sequelize = sequelize
+
+db.user = require('../models/users.js')(sequelize, DataTypes)
+db.vote = require('../models/postVotes')(sequelize, DataTypes)
+db.moderator = require('../models/moderators')(sequelize, DataTypes)
+db.subreddit = require('../models/Subreddit')(sequelize, DataTypes)
+db.comment = require('../models/Comment')(sequelize, DataTypes)
+db.post = require('../models/Post')(sequelize, DataTypes)
+db.commentvote = require('../models/commentVotes')(sequelize, DataTypes)
+
+db.user.hasMany(db.comment)
+db.comment.belongsTo(db.user)
+db.post.belongsTo(db.user)
+db.post.belongsTo(db.subreddit)
+db.post.hasMany(db.comment)
+db.comment.hasMany(db.comment)
+db.comment.belongsTo(db.post)
+db.user.hasMany(db.post)
+db.subreddit.hasMany(db.post)
+db.post.hasMany(db.vote)
+db.user.hasMany(db.vote)
+db.user.hasMany(db.moderator)
+db.subreddit.hasMany(db.moderator)
+db.moderator.belongsTo(db.subreddit)
+db.moderator.belongsTo(db.user)
+db.comment.hasMany(db.commentvote)
+db.user.hasMany(db.commentvote)
+
+db.sequelize.sync({ force: false }).then(() => {
+  console.log('yes re-sync done!')
+})
+
+module.exports = db

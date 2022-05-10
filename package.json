@@ -10,21 +10,28 @@
   "scripts": {
     "dev": "env-cmd -f ./config/dev.env nodemon src/index.js",
     "prepare-test-data": "env-cmd -f ./config/dev.env node src/db/prepare-test-data.js",
-    "db-migrate": "node node_modules/db-migrate/bin/db-migrate",
-    "db-migrate-dev": "env-cmd -f ./config/dev.env npm run db-migrate",
-    "start": "node src/index.js",
+    
+    "start": "nodemon src/index.js",
     "heroku-postbuild": "npm run db-migrate -- up --env prod"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.0.1",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
-    "db-migrate": "^0.11.12",
-    "db-migrate-pg": "^1.2.2",
+  
+    "dotenv": "^16.0.0",
     "express": "^4.17.1",
+    "express-session": "^1.17.2",
     "jsonwebtoken": "^8.5.1",
-    "pg": "^8.5.1"
+    "mysql2": "^2.3.3",
+    "passport": "^0.5.2",
+    "passport-google-oauth2": "^0.2.0",
+    "passport-local": "^1.0.0",
+    "pg": "^8.5.1",
+    "sequelize": "^6.19.0",
+    "url-join": "^5.0.0"
   },
   "devDependencies": {
     "env-cmd": "^10.1.0",

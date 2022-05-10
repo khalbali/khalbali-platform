@@ -1,38 +1,71 @@
 const express = require('express')
-const { query } = require('../db')
-const { selectModeratorsStatement, userIsModerator } = require('../db/utils')
-const auth = require('../middleware/auth')()
+const checkModerator = require('../helperFunctions/checkModerator')
+const db = require('../db/index')
+const User = db.user
+const Subreddit = db.subreddit
+const Moderator = db.moderator
+
+const isAuthenticated = require('../middleware/isAuthenticated')
 
 const router = express.Router()
 
 router.get('/', async (req, res) => {
   try {
     const { username, subreddit } = req.query
-    let whereClause = ''
-    let whereClauseParams = []
+
+    let whereClauseUser = {}
+    let whereClauseSubreddit = {}
+
     if (username && subreddit) {
-      whereClause = 'where u.username = $1 and sr.name = $2'
-      whereClauseParams = [username, subreddit]
-    } else if (username) {
-      whereClause = 'where u.username = $1'
-      whereClauseParams = [username]
-    } else if (subreddit) {
-      whereClause = 'where sr.name = $1'
-      whereClauseParams = [subreddit]
+      whereClauseUser = { where: { userName: username } }
+      whereClauseSubreddit = { where: { name: subreddit } }
     }
 
-    const getModeratorsStatement = `${selectModeratorsStatement} ${whereClause}`
+    if (username && !subreddit) {
+      whereClauseUser = { where: { userName: username } }
+    }
 
-    const { rows } = await query(getModeratorsStatement, whereClauseParams)
-    res.send(rows)
+    if (!username && subreddit) {
+      whereClauseSubreddit = { where: { name: subreddit } }
+    }
+    const ModeratorData = await Moderator.findAll({
+      include: [
+        {
+          model: User,
+          attributes: ['userName'],
+          whereClauseUser,
+        },
+        {
+          model: Subreddit,
+          attributes: ['name'],
+          whereClauseSubreddit,
+        },
+      ],
+    })
+    return res.send(ModeratorData)
   } catch (e) {
-    res.status(500).send({ error: e.message })
+    return res.status(500).send({ error: e.message })
   }
 })
 
-router.post('/', auth, async (req, res) => {
+router.post('/', isAuthenticated, async (req, res) => {
   try {
-    const { username, subreddit } = req.body
+    const { userId, username, subreddit } = req.body
+
+    const userData = await User.findOne({ where: { userName: username } })
+    const subredditData = await Subreddit.findOne({
+      where: { name: subreddit },
+    })
+
+    const moderatorData = await Moderator.findOne({
+      where: { userId: userData.id, subredditId: subredditData.id },
+    })
+
+    if (moderatorData) {
+      return res.status(500).send({ message: 'already moderator' })
+    }
+
+    console.log(req.body)
     if (!username) {
       throw new Error('Must specify user')
     }
@@ -40,35 +73,26 @@ router.post('/', auth, async (req, res) => {
       throw new Error('Must specify subreddit')
     }
 
-    if (await userIsModerator(req.user.username, subreddit) === false) {
+    if ((await checkModerator(userId, subreddit)) === false) {
       return res.status(403).send({
-        error: `You do not have permissions to add a moderator in the subreddit ${subreddit}`
+        error: `You do not have permissions to add a moderator in the subreddit`,
       })
     }
 
-    const insertModeratorStatement = `
-      insert into moderators(user_id, subreddit_id)
-      values(
-        (select id from users where username = $1),
-        (select id from subreddits where name = $2)
-      ) returning *
-    `
+    const newModerator = await Moderator.create({
+      userId: userData.id,
+      subredditId: subredditData.id,
+    })
 
-    const { rows: [insertedModerator] } = await query(insertModeratorStatement, [
-      username,
-      subreddit
-    ])
-
-    res.status(201).send(insertedModerator)
-
+    return res.status(201).send(newModerator)
   } catch (e) {
-    res.status(400).send({ error: e.message })
+    return res.status(400).send({ error: e.message })
   }
 })
 
-router.delete('/', auth, async (req, res) => {
+router.delete('/', isAuthenticated, async (req, res) => {
   try {
-    const { username, subreddit } = req.body
+    const { userId, username, subreddit } = req.body
     if (!username) {
       throw new Error('Must specify user')
     }
@@ -76,29 +100,18 @@ router.delete('/', auth, async (req, res) => {
       throw new Error('Must specify subreddit')
     }
 
-    if (await userIsModerator(req.user.username, subreddit) === false) {
+    if ((await checkModerator(userId, subreddit)) === false) {
       return res.status(403).send({
-        error: `You do not have permissions to delete a moderator in the subreddit '${subreddit}'`
+        error: `You do not have permissions to delete a moderator in the subreddit '${subreddit}'`,
       })
     }
 
-    const deleteModeratorStatement = `
-      delete from moderators
-      where user_id = (select id from users where username = $1)
-      and subreddit_id = (select id from subreddits where name = $2)
-      returning *
-    `
+    const userData = await User.findOne({ where: { userName: username } })
 
-    const { rows: [deletedModerator] } = await query(deleteModeratorStatement, [
-      username,
-      subreddit
-    ])
-
-    if (!deletedModerator) {
-      return res.status(404).send({ error: 'Could not find that moderator' })
-    }
-
-    res.send(deletedModerator)
+    await Moderator.destroy({
+      where: { userId: userData.id },
+    })
+    res.send({ message: 'deleted successfully' })
   } catch (e) {
     res.status(400).send({ error: e.message })
   }
