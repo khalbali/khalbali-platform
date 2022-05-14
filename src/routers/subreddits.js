@@ -9,7 +9,6 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
   try {
-    console.log(req.user.id);
     const allSubreddits = await Subreddit.findAll();
     res.send(allSubreddits);
   } catch (e) {
