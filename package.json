@@ -1,5 +1,5 @@
 {
-  "name": "reddit-clone",
+  "name": "khalbali-project",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,10 +8,7 @@
     "npm": "7.24.0"
   },
   "scripts": {
-    "dev": "env-cmd -f ./config/dev.env nodemon src/index.js",
-    "prepare-test-data": "env-cmd -f ./config/dev.env node src/db/prepare-test-data.js",
-    "start": "nodemon src/index.js",
-    "heroku-postbuild": "npm run db-migrate -- up --env prod"
+    "start": "nodemon src/index.js"
   },
   "author": "",
   "license": "ISC",

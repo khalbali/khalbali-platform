@@ -8,6 +8,8 @@ const db = require("../db/index");
 const router = express.Router();
 const User = db.user;
 
+//get data of all users
+
 router.get("/", isAuthenticated, async (req, res) => {
   try {
     const rows = await User.findAll();
@@ -27,6 +29,8 @@ router.get("/", isAuthenticated, async (req, res) => {
     res.status(500).send({ error: e.message });
   }
 });
+
+//get user by id
 
 router.get("/:id", async (req, res) => {
   try {
@@ -52,9 +56,20 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/login", passport.authenticate("local-signup"), (req, res) => {
-  res.json({ message: "Success", username: req.user });
-});
+//login using username password
+
+router.post(
+  "/login",
+  passport.authenticate("local-signup", { failWithError: true }),
+  function (req, res, next) {
+    return res.json({ message: "Success", user: req.user });
+  },
+  function (err, req, res, next) {
+    return res.json({ message: "Wrong username or password" });
+  }
+);
+
+//register a new user
 
 router.post("/register", async (req, res) => {
   try {
@@ -89,9 +104,11 @@ router.post("/register", async (req, res) => {
   }
 });
 
-router.get("/logout", async (req, res) => {
-  req.logOut();
-  res.send("loggedout");
+//logout
+
+router.post("/logout", async (req, res) => {
+  req.logout();
+  res.send({ message: "logged out successfully" });
 }) /
   router.put("/:id", async (req, res) => {
     try {
@@ -125,6 +142,8 @@ router.get("/logout", async (req, res) => {
       res.status(404).send({ error: e.message });
     }
   });
+
+//delete user using id
 
 router.delete("/:id", async (req, res) => {
   try {

@@ -11,17 +11,24 @@ const User = db.user;
 const Sequelize = require("sequelize");
 const checkModerator = require("../helperFunctions/checkModerator");
 
+//get all post or of a specific subreddit
+
 router.get("/", async (req, res) => {
   try {
     const { subreddit } = req.query;
-    const FoundData = await Subreddit.findOne({
-      where: { name: subreddit },
-    });
+    let whereClause = {};
+
+    if (subreddit) {
+      whereClause = { where: { name: subreddit } };
+      console.log(subreddit);
+    }
+
+    const FoundData = await Subreddit.findAll(whereClause);
     if (!FoundData) {
       return res.status(404).send("no subreddit avaible with this name");
     } else {
       const FoundPost = await Post.findAll({
-        where: { subredditId: FoundData.id },
+        where: { subredditId: FoundData[0].id },
         attributes: {
           include: [
             [
@@ -55,6 +62,8 @@ router.get("/", async (req, res) => {
   }
 });
 
+//get post data using id
+
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -76,9 +85,12 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+//make a post in a subreddit
+
 router.post("/", isAuthenticated, async (req, res) => {
   try {
-    const { type, title, body, subreddit, userId } = req.body;
+    const userId = req.user.id;
+    const { type, title, body, subreddit } = req.body;
     if (!type) {
       throw new Error("Must specify post type");
     }
@@ -120,7 +132,9 @@ router.post("/", isAuthenticated, async (req, res) => {
   }
 });
 
-router.put("/:id", async (req, res) => {
+//edit a post
+
+router.put("/:id", isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -149,6 +163,8 @@ router.put("/:id", async (req, res) => {
     res.status(400).send({ error: e.message });
   }
 });
+
+//delete a post
 
 router.delete("/:id", isAuthenticated, async (req, res) => {
   try {

@@ -12,6 +12,8 @@ const Subreddit = db.subreddit;
 
 const router = express.Router();
 
+//get all the comment data
+
 router.get("/", async (req, res) => {
   try {
     const commentData = await Comment.findAll();
@@ -20,6 +22,8 @@ router.get("/", async (req, res) => {
     res.status(500).send({ error: e.message });
   }
 });
+
+//get post data with comment data using postId
 
 router.get("/:post_id", async (req, res) => {
   try {
@@ -69,9 +73,12 @@ router.get("/:post_id", async (req, res) => {
   }
 });
 
+//comment on a post
+
 router.post("/", isAuthenticated, async (req, res) => {
   try {
-    const { body, post_id, parent_comment_id, userId } = req.body;
+    const userId = req.user.id;
+    const { body, post_id, parent_comment_id } = req.body;
     if (!body) {
       throw new Error("Must specify comment body");
     }
@@ -103,6 +110,8 @@ router.post("/", isAuthenticated, async (req, res) => {
     res.status(400).send({ error: e.message });
   }
 });
+
+//edit a comment
 
 router.put("/:id", isAuthenticated, async (req, res) => {
   try {
@@ -137,11 +146,12 @@ router.put("/:id", isAuthenticated, async (req, res) => {
   }
 });
 
+//delete a comment
+
 router.delete("/:id", isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.body;
-
+    const userId = req.user.id;
     const commentData = await Comment.findByPk(id, {
       include: [{ model: Post, include: [Subreddit] }],
     });
